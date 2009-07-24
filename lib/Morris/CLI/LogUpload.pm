@@ -15,7 +15,7 @@ use Template::Stash::ForceUTF8;
 use WWW::Mechanize;
 
 with 'MooseX::Getopt';
-with 'MooseX::ConfigFromFile';
+with 'MooseX::SimpleConfig';
 
 has '+configfile' => (
     default => '/etc/morris.conf'
@@ -133,26 +133,6 @@ EOM
 [% END %]
 EOM
 );
-
-
-
-sub get_config_from_file
-{
-    my ($class, $file) = @_;
-
-    my $cfg = Config::Any->load_files({
-        files => [ $file ],
-        use_ext => 1,
-        driver_args => {
-            General => {
-                -LowerCaseNames => 1
-            }
-        }
-    });
-
-    return (scalar @$cfg > 0 && $cfg->[0]->{$file}->{logupload})
-        or die "Could not load $file";
-}
 
 sub run {
     my $self  = shift;

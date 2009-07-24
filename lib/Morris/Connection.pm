@@ -1,87 +1,76 @@
-# $Id: Connection.pm 28165 2009-01-08 06:40:53Z daisuke $
-
 package Morris::Connection;
 use Moose;
 use Moose::Util::TypeConstraints;
 use Morris::Message;
 use POE qw(Component::IRC Component::IRC::Plugin::Connector Component::IRC::Plugin::BotCommand);
-use Data::Dumper;
+use namespace::clean -except => qw(meta);
 
-has 'alias' => (
+has alias => (
     is => 'rw',
     isa => 'Str',
     required => 1,
-    lazy => 1,
-    builder  => 'build_alias',
+    lazy_build => 1,
 );
 
-has 'session' => (
+has session => (
     is => 'rw',
     isa => 'POE::Session',
 );
 
-has 'irc' => (
+has irc => (
     is => 'rw',
     isa => 'POE::Component::IRC'
 );
 
-has 'hooks' => (
+has hooks => (
     is => 'rw',
     isa => 'HashRef',
     default => sub { +{} }
 );
 
-has 'server' => (
+has server => (
     is => 'rw',
     isa => 'Str',
     required => 1
 );
 
-has 'port' => (
+has port => (
     is => 'rw',
     isa => 'Str',
     default => 6667,
     required => 1
 );
 
-has 'nickname' => (
+has nickname => (
     is => 'rw',
     isa => 'Str',
     required => 1
 );
 
-has 'password' => (
+has password => (
     is => 'rw',
     isa => 'Str',
 );
 
-has 'plugins' => (
+has plugins => (
     is => 'rw',
     isa => 'HashRef',
     coerce => 1,
     default => sub { +{} },
 );
 
-has 'bot' => (
+has bot => (
     is => 'rw',
     isa => 'POE::Component::IRC::Plugin::BotCommand'
 );
 
-has 'engine' => (
+has engine => (
     is => 'rw',
     isa => 'Morris::Engine',
     required => 1,
     handles  => [ qw(resource set_resource) ],
 );
 
-__PACKAGE__->meta->make_immutable;
-
-no Moose;
-no Moose::Util::TypeConstraints;
-
-$Data::Dumper::Indent   = 1;
-$Data::Dumper::Terse    = 1;
-$Data::Dumper::Sortkeys = 1;
 
 sub BUILDARGS {
     my ($self, %args) = @_;
@@ -118,7 +107,7 @@ print "plugin: $plugin_class\n";
 }
 
 sub bot_alias { join('-', shift->alias, 'bot') }
-sub build_alias { join('-', 'blah', $$, {}, time(), rand() ) }
+sub _build_alias { join('-', 'blah', $$, {}, time(), rand() ) }
 
 
 sub start
