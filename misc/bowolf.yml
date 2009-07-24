@@ -1,0 +1,10 @@
+connect_info:
+    - dbi:SQLite:dbname=bowolf.db
+    -
+    -
+    - RaiseError: 1
+      AutoCommit: 1
+
+ikc_address: 127.0.0.1
+ikc_port: 12321
+irc_channel: bowolf
