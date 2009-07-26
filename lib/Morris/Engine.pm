@@ -6,6 +6,7 @@ use Moose::Util::TypeConstraints;
 use MooseX::AttributeHelpers;
 use Morris::Connection;
 use POE;
+use namespace::clean -except => qw(meta);
 
 has 'poe_main_session' => (
     is => 'rw',
@@ -42,12 +43,8 @@ has 'config' => (
 
 __PACKAGE__->meta->make_immutable;
 
-no Moose;
-no Moose::Util::TypeConstraints;
-
 sub BUILD {
     my $self        = shift;
-
     my $config      = $self->config;
     my $connlist    = delete $config->{connection} or die "no connection definition provided";
     my $connections = [];

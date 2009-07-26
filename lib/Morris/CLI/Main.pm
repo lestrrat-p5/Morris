@@ -3,8 +3,7 @@ use Moose;
 use Morris::Engine;
 use namespace::clean -except => qw(meta);
 
-with 'MooseX::Getopt';
-with 'MooseX::SimpleConfig';
+with 'Morris::Role::Cmd';
 
 has '+configfile' => (
     default => '/etc/morris.conf'
@@ -22,9 +21,9 @@ has 'network' => (
 
 __PACKAGE__->meta->make_immutable;
 
-sub run
-{
+sub run {
     my ($self) = @_;
+
     my $engine = Morris::Engine->new(
         config => $self
     );

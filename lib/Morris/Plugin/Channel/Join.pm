@@ -2,6 +2,7 @@
 
 package Morris::Plugin::Channel::Join;
 use Moose;
+use namespace::clean -except => qw(meta);
 
 with 'Morris::Plugin';
 
@@ -18,7 +19,7 @@ has 'auto_rejoin' => (
     default => 0
 );
 
-around 'new' => sub {
+around new => sub {
     my $next  = shift;
     my $class = shift;
     my %args  = @_;
@@ -34,10 +35,6 @@ around 'new' => sub {
     $next->($class, %args);
 };
 
-__PACKAGE__->meta->make_immutable;
-
-no Moose;
-
 sub register {
     my ($self, $conn) = @_;
 
@@ -52,6 +49,8 @@ sub join_channels {
     my $self = shift;
     $self->connection->irc_join( { channels => [ $self->channels ] } );
 }
+
+__PACKAGE__->meta->make_immutable(inline_constructor => 0);
 
 1;
 
