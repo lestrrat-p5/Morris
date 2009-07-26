@@ -2,6 +2,7 @@
 
 package Morris::Plugin::Channel::QOTD;
 use Moose;
+use DBI;
 use Morris::Types;
 use Text::MeCab;
 use namespace::clean -except => qw(meta);
