@@ -1,14 +1,5 @@
 #!/usr/local/bin/perl
-
-# $Id$
-
 use strict;
 use Morris::CLI::Main;
 
-main() unless caller();
-
-sub main
-{
-    Morris::CLI::Main->new_with_options()->run;
-}
-    
+Morris::CLI::Main->new_with_options()->run();
