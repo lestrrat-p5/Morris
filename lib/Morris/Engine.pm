@@ -57,6 +57,7 @@ sub BUILD {
             %$network,
             config => $config,
             engine => $self,
+            name   => $name,
         );
         $self->push_connection($connection);
     }

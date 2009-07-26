@@ -5,67 +5,79 @@ use Morris::Message;
 use POE qw(Component::IRC Component::IRC::Plugin::Connector Component::IRC::Plugin::BotCommand);
 use namespace::clean -except => qw(meta);
 
+has name => (
+    is => 'ro',
+    isa => 'Str',
+    required => 1
+);
+
 has alias => (
-    is => 'rw',
+    is => 'ro',
     isa => 'Str',
     required => 1,
     lazy_build => 1,
 );
 
 has session => (
-    is => 'rw',
+    is => 'ro',
     isa => 'POE::Session',
+    required => 1,
+    lazy_build => 1,
+    init_arg => undef,
 );
 
 has irc => (
-    is => 'rw',
-    isa => 'POE::Component::IRC'
+    is => 'ro',
+    isa => 'POE::Component::IRC',
+    required => 1,
+    lazy_build => 1,
+    init_arg => undef,
 );
 
 has hooks => (
-    is => 'rw',
+    is => 'ro',
     isa => 'HashRef',
     default => sub { +{} }
 );
 
 has server => (
-    is => 'rw',
+    is => 'ro',
     isa => 'Str',
     required => 1
 );
 
 has port => (
-    is => 'rw',
+    is => 'ro',
     isa => 'Str',
     default => 6667,
     required => 1
 );
 
 has nickname => (
-    is => 'rw',
+    is => 'ro',
     isa => 'Str',
     required => 1
 );
 
 has password => (
-    is => 'rw',
+    is => 'ro',
     isa => 'Str',
 );
 
 has plugins => (
-    is => 'rw',
+    is => 'ro',
     isa => 'HashRef',
     coerce => 1,
     default => sub { +{} },
 );
 
 has bot => (
-    is => 'rw',
+    is => 'ro',
     isa => 'POE::Component::IRC::Plugin::BotCommand'
 );
 
 has engine => (
-    is => 'rw',
+    is => 'ro',
     isa => 'Morris::Engine',
     required => 1,
     handles  => [ qw(resource set_resource) ],
@@ -97,10 +109,16 @@ print "plugin: $plugin_class\n";
             @args = ($config);
         }
 
-        foreach my $args (@args) {
-            my $plugin = $plugin_class->new(%$args, connection => $self);
-            $plugin->register( $self );
+        eval {
+            foreach my $args (@args) {
+                my $plugin = $plugin_class->new(%$args, connection => $self);
+                $plugin->register( $self );
+            }
+        };
+        if ($@) {
+            die "Failed to setup plugin $plugin_class for connection " . $self->name . ": $@";
         }
+
     }
 
     $self;
@@ -112,6 +130,11 @@ sub _build_alias { join('-', 'blah', $$, {}, time(), rand() ) }
 
 sub start
 {
+    my $self = shift;
+    $self->session; # force initialization
+}
+
+sub _build_session {
     my $self = shift;
     my %states = (
         map {
@@ -126,12 +149,10 @@ sub start
         )
     );
 
-    $self->session(
-        POE::Session->create(
-            object_states => [
-                $self => \%states
-            ]
-        )
+    return POE::Session->create(
+        object_states => [
+            $self => \%states
+        ]
     );
 }
 
@@ -148,10 +169,8 @@ sub register_command {
     $self->bot->add( $cmd, $usage, $code );
 }
 
-sub poe_start {
-    my ($self, $kernel) = @_[ OBJECT, KERNEL ];
-
-    $kernel->alias_set( $self->alias );
+sub _build_irc {
+    my $self = shift;
     my $irc = POE::Component::IRC->spawn(
         alias    => $self->bot_alias,
         $ENV{MORRIS_CONNECTION_DEBUG} ? (
@@ -163,8 +182,14 @@ sub poe_start {
 #    my $bot = POE::Component::IRC::Plugin::BotCommand->new();
 #    $self->bot($bot);
 #    $irc->plugin_add('BotCommand' => $bot);
+    return $irc;
+}
 
-    $self->irc($irc);
+sub poe_start {
+    my ($self, $kernel) = @_[ OBJECT, KERNEL ];
+
+    $kernel->alias_set( $self->alias );
+    $self->irc; # force initialization
 
     $kernel->delay( periodic => 10 );
 
