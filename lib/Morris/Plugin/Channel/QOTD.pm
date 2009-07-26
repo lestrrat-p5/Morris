@@ -100,7 +100,7 @@ sub handle_message {
         } elsif ($3) {
             $quote = $3;
             my $ends_with_connector = $self->ends_with_connector($quote);
-            $dbh->do("INSERT INTO qotd (channel, quote, created_on) VALUES (?, ?, ?)", undef, $channel, $quote, time());
+            $dbh->do("INSERT INTO qotd (channel, quote, ends_with_connector, created_on) VALUES (?, ?, ?)", undef, $channel, $quote, $ends_with_connector, time());
 
             my $sth = $dbh->prepare("SELECT count(*) FROM qotd WHERE channel = ?");
             $sth->execute($channel);
