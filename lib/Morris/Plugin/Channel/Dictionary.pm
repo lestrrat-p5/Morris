@@ -1,15 +1,11 @@
 package Morris::Plugin::Channel::Dictionary;
 use Moose;
-use Moose::Util::TypeConstraints;
+use Morris::Types;
 use DBI;
 use namespace::clean -except => qw(meta);
 
 with 'Morris::Plugin';
 
-coerce 'ArrayRef'
-    => from 'Str'
-    => via { [ $_ ] }
-;
 has connect_info => (
     is => 'ro',
     isa => 'ArrayRef',

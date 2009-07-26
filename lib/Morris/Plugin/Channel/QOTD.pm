@@ -2,16 +2,11 @@
 
 package Morris::Plugin::Channel::QOTD;
 use Moose;
-use Moose::Util::TypeConstraints;
+use Morris::Types;
 use Text::MeCab;
 use namespace::clean -except => qw(meta);
 
 with 'Morris::Plugin';
-
-coerce 'RegexpRef'
-    => from 'Str'
-    => via { qr/$_/ }
-;
 
 has command => (
     is => 'rw',
