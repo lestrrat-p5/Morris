@@ -137,7 +137,7 @@ sub handle_message {
         $dbh->disconnect;
         $self->connection->irc_notice({
             channel => $channel,
-            message => $facemarks[ rand @facemarks ] . " < $quote ",
+            message => $message || $facemarks[ rand @facemarks ] . " < $quote ",
         });
     }
 }
