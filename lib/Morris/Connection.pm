@@ -76,7 +76,7 @@ sub BUILDARGS {
     my ($self, %args) = @_;
 
     $args{plugins} = delete $args{plugin};
-    return \%args;
+    return $self->next::method(%args);
 }
 
 sub BUILD {
@@ -160,9 +160,9 @@ sub poe_start {
         ) : ()
     );
     $irc->plugin_add( Connector => POE::Component::IRC::Plugin::Connector->new() );
-    my $bot = POE::Component::IRC::Plugin::BotCommand->new();
-    $self->bot($bot);
-    $irc->plugin_add('BotCommand' => $bot);
+#    my $bot = POE::Component::IRC::Plugin::BotCommand->new();
+#    $self->bot($bot);
+#    $irc->plugin_add('BotCommand' => $bot);
 
     $self->irc($irc);
 
