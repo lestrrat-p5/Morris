@@ -85,6 +85,7 @@ sub handle_message {
      ) {
         # how many?
         my $dbh = DBI->connect(@{ $self->connect_info });
+        my $reply;
         if ($2) {
             $quote = $3;
             my $rv = $dbh->do("DELETE FROM qotd WHERE channel = ? AND quote = ?",
@@ -107,7 +108,7 @@ sub handle_message {
             my ($count) = $sth->fetchrow_array();
             $dbh->disconnect;
 
-            $message .= "（登録数：" . $count . "）";
+            $reply = "$message （登録数：$count）";
         } else {
             my $x = $1;
             my $count = scalar(my @a = ($x =~ /\G((?:$command))/g));
@@ -137,7 +138,7 @@ sub handle_message {
         $dbh->disconnect;
         $self->connection->irc_notice({
             channel => $channel,
-            message => $message || $facemarks[ rand @facemarks ] . " < $quote ",
+            message => $reply || $facemarks[ rand @facemarks ] . " < $quote ",
         });
     }
 }
