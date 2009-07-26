@@ -48,8 +48,8 @@ sub handle_message {
     # <nickname>: XXX is YYYY
 
     # This is to learn new words
-    if ($message =~ /^$nickname:\s*([^=]+)\s*=\s*([\S.]+)$/ ||
-        $message =~ /^$nickname:\s*(\S+)\s+is\s+([\S.]+)$/
+    if ($message =~ /^$nickname:\s*([^=]+)\s*=\s*(.+)$/ ||
+        $message =~ /^$nickname:\s*(\S+)\s+is\s+(.+)$/
     ) {
         my ($term, $definition) = ($1, $2);
         my $dbh = DBI->connect(@{ $self->connect_info });
