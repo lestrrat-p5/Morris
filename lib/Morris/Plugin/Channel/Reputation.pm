@@ -6,6 +6,11 @@ use DBI;
 
 with 'Morris::Plugin';
 
+has connect_info => (
+    is => 'ro',
+    isa => 'ArrayRef'
+);
+
 __PACKAGE__->meta->make_immutable;
 
 no Moose;
@@ -73,8 +78,17 @@ EOSQL
 }
 
 sub get_dbh {
-    my $dbh = DBI->connect('dbi:SQLite:dbname=/service/morris/reputation.db',
-            undef, undef,  {RaiseError => 1, AutoCommit => 1});
+    my $self = shift;
+    my $connect_info = $self->connect_info();
+    $connect_info[3] ||= {};
+    if (! exists $connect_info->[3]->{RaiseError} ) {
+        $connect_info->[3]->{RaiseError} = 1;
+    }
+    if (! exists $connect_info->[3]->{AutoCommit} ) {
+        $connect_info->[3]->{AutoCommit} = 1;
+    }
+
+    my $dbh = DBI->connect(@$connect_info);
 
     $dbh->do(<<EOSQL);
 CREATE TABLE IF NOT EXISTS reputation (
