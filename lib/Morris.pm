@@ -5,6 +5,8 @@ use AnyEvent;
 use Morris::Connection;
 use namespace::clean -except => qw(meta);
 
+our $VERSION = '0.01000';
+
 has connections => (
     traits => ['Array'],
     is => 'ro',
@@ -38,11 +40,6 @@ sub new_from_config {
     return $self;
 }
 
-#after push_connection => sub {
-#    my ($self, $connection) = @_;
-#    $connection->engine( $self );
-#};
-
 sub run {
     my $self = shift;
     foreach my $conn ($self->all_connections) {
@@ -53,3 +50,5 @@ sub run {
 }
 
 __PACKAGE__->meta->make_immutable();
+
+1;
