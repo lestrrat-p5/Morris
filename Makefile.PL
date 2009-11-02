@@ -1,36 +1,25 @@
 use inc::Module::Install;
 
-name('Morris');
-all_from('lib/Morris.pm');
-
+name 'Morris';
+all_from 'lib/Morris.pm';
+requires 'AnyEvent';
+requires 'AnyEvent::Handle';
+requires 'AnyEvent::HTTP';
+requires 'AnyEvent::IRC';
 requires 'Config::Any';
-requires 'Config::General';
-requires 'Digest::MD5';
 requires 'DBI';
-requires 'DateTime';
-requires 'DBI';
-requires 'HTML::Parse';
+requires 'Encode';
+requires 'EV'; # want to make it plaggable?
+requires 'File::Temp';
+requires 'HTML::TreeBuilder';
 requires 'Image::Size';
-requires 'LWP::UserAgent';
-requires 'Moose';
-requires 'MooseX::AttributeHelpers';
+requires 'Moose' => '0.92';
 requires 'MooseX::ConfigFromFile';
-requires 'MooseX::Singleton';
-requires 'MooseX::Types::Path::Class';
-requires 'MooseX::Types::URI';
-requires 'POE::Component::IRC';
-requires 'POE::Component::IKC::ClientLite';
-requires 'SQL::Abstract::Limit';
-requires 'Template';
-requires 'Template::Stash::ForceUTF8';
-requires 'XML::LibXML';
+requires 'MooseX::Getopt';
+requires 'SQL::Abstract::Limit'; # want to remove
+requires 'Text::MeCab';
+requires 'URI';
+requires 'XML::LibxML' => '1.61';
 requires 'namespace::clean';
 
-recommends 'Text::MeCab';
-recommends 'Web::Scraper';
-recommends 'WWW::Mechanize';
-
-test_requires 'Test::UseAllModules';
-
-auto_include_deps;
 WriteAll;

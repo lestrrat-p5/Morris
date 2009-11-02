@@ -1,9 +1,55 @@
-# $Id: Morris.pm 19333 2008-09-15 11:35:36Z daisuke $
-
 package Morris;
-use 5.008;
+use Moose;
+use EV;
+use AnyEvent;
+use Morris::Connection;
+use namespace::clean -except => qw(meta);
 
-our $AUTHORITY = 'cpan:DMAKI';
-our $VERSION   = '0.00001';
+has connections => (
+    traits => ['Array'],
+    is => 'ro',
+    isa => 'ArrayRef[Morris::Connection]',
+    lazy_build => 1,
+    handles => {
+        push_connection => 'push',
+        all_connections => 'elements',
+    }
+);
 
-1;
+sub _build_connections { [] }
+
+sub new_from_config {
+    my ($class, $config) = @_;
+
+    my $self = $class->new();
+
+    while ( my ($name, $conn) = each %{$config->{connection}}) {
+        my $network = $config->{network}->{ $conn->{network} };
+        $network->{server} ||= $conn->{network};
+
+        my $connection = Morris::Connection->new_from_config( {
+            %$conn,
+            %$network,
+            name   => $name,
+        });
+        $self->push_connection( $connection );
+    }
+
+    return $self;
+}
+
+#after push_connection => sub {
+#    my ($self, $connection) = @_;
+#    $connection->engine( $self );
+#};
+
+sub run {
+    my $self = shift;
+    foreach my $conn ($self->all_connections) {
+        $conn->run();
+    }
+
+    EV::loop;
+}
+
+__PACKAGE__->meta->make_immutable();

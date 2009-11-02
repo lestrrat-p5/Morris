@@ -1,43 +1,21 @@
 package Morris::Connection;
 use Moose;
-use Moose::Util::TypeConstraints;
+use AnyEvent::IRC::Client;
 use Morris::Message;
-use POE qw(Component::IRC Component::IRC::Plugin::Connector Component::IRC::Plugin::BotCommand);
 use namespace::clean -except => qw(meta);
 
-has name => (
-    is => 'ro',
-    isa => 'Str',
-    required => 1
-);
-
-has alias => (
-    is => 'ro',
-    isa => 'Str',
-    required => 1,
-    lazy_build => 1,
-);
-
-has session => (
-    is => 'ro',
-    isa => 'POE::Session',
-    required => 1,
-    lazy_build => 1,
-    init_arg => undef,
-);
-
 has irc => (
-    is => 'ro',
-    isa => 'POE::Component::IRC',
-    required => 1,
-    lazy_build => 1,
-    init_arg => undef,
+    is => 'rw',
+    isa => 'AnyEvent::IRC::Client',
+    handles => {
+        send_srv => 'send_srv',
+    }
 );
 
 has hooks => (
     is => 'ro',
     isa => 'HashRef',
-    default => sub { +{} }
+    lazy_build => 1,
 );
 
 has server => (
@@ -64,96 +42,38 @@ has password => (
     isa => 'Str',
 );
 
-has plugins => (
-    is => 'ro',
-    isa => 'HashRef',
-    coerce => 1,
-    default => sub { +{} },
-);
+sub _build_hooks { {} }
 
-has bot => (
-    is => 'ro',
-    isa => 'POE::Component::IRC::Plugin::BotCommand'
-);
+sub new_from_config {
+    my ($class, $config) = @_;
 
-has engine => (
-    is => 'ro',
-    isa => 'Morris::Engine',
-    required => 1,
-    handles  => [ qw(resource set_resource) ],
-);
-
-
-sub BUILDARGS {
-    my ($self, %args) = @_;
-
-    $args{plugins} = delete $args{plugin};
-    return $self->next::method(%args);
-}
-
-sub BUILD {
-    my ($self, $args) = @_;
-
-    my $plugins = $self->plugins;
-    while (my ($plugin_class, $config) = each %$plugins) {
-print "plugin: $plugin_class\n";
-        if ($plugin_class !~ s/^\+//) {
-            $plugin_class = "Morris::Plugin::$plugin_class";
+    my $plugins = delete $config->{plugin};
+    my $self = $class->new(%$config);
+    while ( my ($class, $p) = each %$plugins ) {
+        if ($class !~ s/^\+//) {
+            $class = "Morris::Plugin::$class";
         }
-        Class::MOP::load_class($plugin_class);
-
-        my @args;
-        if ( ref $config eq 'ARRAY') {
-            @args = @$config;
-        } else {
-            @args = ($config);
+        if (! Class::MOP::is_class_loaded( $class) ) {
+            Class::MOP::load_class( $class );
         }
 
-        eval {
-            foreach my $args (@args) {
-                my $plugin = $plugin_class->new(%$args, connection => $self);
-                $plugin->register( $self );
-            }
-        };
-        if ($@) {
-            die "Failed to setup plugin $plugin_class for connection " . $self->name . ": $@";
-        }
-
+        my $plugin = $class->new_from_config( $p );
+        $plugin->register( $self );
     }
-
-    $self;
+    return $self;
 }
 
-sub bot_alias { join('-', shift->alias, 'bot') }
-sub _build_alias { join('-', 'blah', $$, {}, time(), rand() ) }
+sub call_hook {
+    my ($self, $name, @args) = @_;
 
+warn "Calling hooks for $name";
 
-sub start
-{
-    my $self = shift;
-    $self->session; # force initialization
-}
+    my $hooks = $self->hooks->{$name};
+    return unless $hooks;
 
-sub _build_session {
-    my $self = shift;
-    my %states = (
-        map {
-            my $k = $_;
-            $k =~ s/^_?/poe_/;
-            ($_ => $k)
-        } (
-            qw( _start _stop call_hook connect ),
-            qw( irc_registered irc_001 irc_002 irc_003 irc_socketerr irc_disconnected ),
-            qw( irc_public irc_join),
-            qw( periodic ),
-        )
-    );
-
-    return POE::Session->create(
-        object_states => [
-            $self => \%states
-        ]
-    );
+    foreach my $hook (@$hooks) {
+        $hook->( @args );
+    }
 }
 
 sub register_hook {
@@ -164,201 +84,44 @@ sub register_hook {
     push @$list, $code;
 }
 
-sub register_command {
-    my ($self, $cmd, $usage, $code) = @_;
-    $self->bot->add( $cmd, $usage, $code );
-}
-
-sub _build_irc {
+sub run {
     my $self = shift;
-    my $irc = POE::Component::IRC->spawn(
-        alias    => $self->bot_alias,
-        $ENV{MORRIS_CONNECTION_DEBUG} ? (
-            debug => 1,
-            options  => { debug => 1, trace => 1 },
-        ) : ()
-    );
-    $irc->plugin_add( Connector => POE::Component::IRC::Plugin::Connector->new() );
-#    my $bot = POE::Component::IRC::Plugin::BotCommand->new();
-#    $self->bot($bot);
-#    $irc->plugin_add('BotCommand' => $bot);
-    return $irc;
-}
 
-sub poe_start {
-    my ($self, $kernel) = @_[ OBJECT, KERNEL ];
-
-    $kernel->alias_set( $self->alias );
-    $self->irc; # force initialization
-
-    $kernel->delay( periodic => 10 );
-
-#    $irc->yield( register => 'all' );
-
-    $kernel->post($self->alias, 'connect') or die;
-}
-
-sub poe_periodic {
-    my ($self, $kernel) = @_[OBJECT, KERNEL];
-
-    $self->call_hook( 'periodic' );
-    $kernel->delay( periodic => 10 );
-}
-        
-
-sub poe_connect {
-    my $self = $_[OBJECT];
-
-    my $irc = $self->irc;
-    $irc->yield( connect  => {
-        nick     => $self->nickname,
-        server   => $self->server,
-        port     => $self->port,
+    my $irc = AnyEvent::IRC::Client->new();
+    $self->irc($irc);
+    $irc->connect( $self->server, $self->port, {
+        nick => $self->nickname,
+        user => $self->nickname,
         password => $self->password,
+        timeout => 1,
     } );
-}
-
-sub poe_stop
-{
-    my ($self, $kernel) = @_[ OBJECT, KERNEL ];
-
-    $kernel->alias_remove( $self->alias );
-    $self->irc->shutdown();
-}
-
-sub poe_call_hook
-{
-    my ($self, $kernel, $name) = @_[ OBJECT, KERNEL, ARG0 ];
-
-    $self->call_hook($name);
-}
-
-sub call_hook
-{
-    my ($self, $name, @args) = @_;
-
-    my $hooks = $self->hooks->{$name};
-    return unless $hooks;
-
-    foreach my $hook (@$hooks) {
-        $hook->( @args );
-    }
-}
-
-sub log {
-    my ($self, @args) = @_;
-    printf STDERR @args;
-}
-
-sub poe_irc_registered {
-    my ($self, $kernel) = @_[ OBJECT, KERNEL ];
-
-    my $irc = $self->irc;
-    $self->log( 
-        "Connecting to %s:%s as %s (USING password %s)\n", 
-        $self->server,
-        $self->port,
-        $self->nickname,
-        $self->password ? "YES" : "NO"
+    $irc->reg_cb(
+        connect     => sub { $self->call_hook( 'server.connected' ) },
+        disconnect  => sub { $self->call_hook( 'server.disconnect' ) },
+        irc_privmsg => sub { 
+            my ($nick, $raw) = @_;
+            my $message = Morris::Message->new(
+                channel => $raw->{params}->[0],
+                message => $raw->{params}->[1],
+                from    => $raw->{prefix},
+            );
+            $self->call_hook( 'chat.privmsg', $message )
+        },
+        join => sub { $self->call_hook( 'channel.joined' ) },
+        registered  => sub { $self->call_hook( 'server.registered' ) },
     );
-}
-
-sub poe_irc_socketerr {
-    my ($self, $kernel, $errstr) = @_[ OBJECT, KERNEL, ARG0 ];
-    $self->log( "Connect failed: %s\n", $errstr);
-}
-
-sub poe_irc_001 {
-    my ($self, $kernel, $server, $message) = @_[ OBJECT, KERNEL, ARG0, ARG1 ];
-    $self->log( "Connected to %s: %s\n", $server, $message );
-    $self->call_hook( 'server.welcome', server => $server, message => $message );
-    $self->call_hook( 'server.connected' );
-}
-
-sub poe_irc_002 {
-    my ($self, $kernel, $host, $message) = @_[ OBJECT, KERNEL, ARG0, ARG1 ];
-    $self->call_hook( 'server.yourhost', host => $host, message => $message );
-}
-
-sub poe_irc_003 {
-    my ($self, $kernel, $host, $message) = @_[ OBJECT, KERNEL, ARG0, ARG1 ];
-    $self->call_hook( 'server.003', host => $host, message => $message );
-    
-}
-
-sub poe_irc_public {
-    my ($self, $who, $where, $what) = @_[ OBJECT, ARG0 .. ARG2 ];
-
-#    if ($what =~ /!morris (on|off)$/) {
-#        $self->enabled
-    $self->call_hook(
-        'channel.public',
-        {
-            message => Morris::Message->new(
-                from    => $who,
-                channel => $where->[0],
-                message => $what,
-            )
-        }
-    );
-}
-
-sub poe_irc_join {
-    my ($self, $who, $where ) = @_[ OBJECT, ARG0, ARG1 ];
-
-    $self->call_hook(
-        'channel.join',
-        {
-            message => Morris::Message->new(
-                from    => $who,
-                channel => $where,
-            )
-        }
-    );
-}
-
-sub poe_irc_disconnected {
-    my ($self, $where) = @_[ OBJECT, ARG0 ];
-    $self->log(  "Disconnected from %s\n", $where );
-}
-
-sub irc_join
-{
-    my ($self, $args) = @_;
-
-    my $channels = $args->{channels};
-
-    my $irc = $self->irc;
-    foreach my $channel (@$channels) {
-        my ($name, $password) = ref ($channel) eq 'ARRAY' ? @$channel : ($channel, undef);
-        $self->log( "Joined channel '%s'\n", $name );
-        $irc->yield( join => $name => $password );
-    }
-}
-
-sub irc_mode
-{
-    my ($self, $args) = @_;
-
-    my $irc = $self->irc;
-
-    $irc->yield( 'mode' => $args->{channel} => $args->{mode} => $args->{who} );
-}
-
-sub irc_privmsg {
-    my ($self, $args) = @_;
-
-    my $irc = $self->irc;
-
-    $irc->yield( privmsg => $args->{channel} => $args->{message} );
 }
 
 sub irc_notice {
     my ($self, $args) = @_;
-
-    my $irc = $self->irc;
-
-    $irc->yield( notice => $args->{channel} => $args->{message} );
+    $self->send_srv(NOTICE => $args->{channel} => $args->{message});
 }
+
+sub irc_privmsg {
+    my ($self, $args) = @_;
+    $self->send_srv(PRIVMSG => $args->{channel} => $args->{message});
+}
+
+__PACKAGE__->meta->make_immutable();
 
 1;

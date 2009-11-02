@@ -1,17 +1,24 @@
-# $Id: Plugin.pm 24702 2008-11-23 14:12:32Z daisuke $
-
 package Morris::Plugin;
-use Moose::Role;
+use Moose;
+use namespace::clean -except => qw(meta);
 
-has 'connection' => (
-    is       => 'rw',
-    isa      => 'Morris::Connection',
-    required => 1,
-    handles  => [ qw(engine) ],
+has connection => (
+    is => 'ro',
+    isa => 'Morris::Connection',
+    writer => '_connection'
 );
 
-requires qw(register);
+sub new_from_config {
+    my ($class, $args) = @_;
+    return $class->new(%$args);
+}
 
-no Moose::Role;
+sub register {
+    my ($self, $conn) = @_;
+    $self->_connection( $conn );
+    warn "registered $self";
+}
+
+__PACKAGE__->meta->make_immutable();
 
 1;
