@@ -105,8 +105,8 @@ sub run {
         timeout => 1,
     } );
     $irc->reg_cb(
-        connect     => sub { $self->call_hook( 'server.connected' ) },
-        disconnect  => sub { $self->call_hook( 'server.disconnect' ) },
+        connect     => sub { $self->call_hook( 'server.connected', @_ ) },
+        disconnect  => sub { $self->call_hook( 'server.disconnect', @_ ) },
         irc_privmsg => sub { 
             my ($nick, $raw) = @_;
             my $message = Morris::Message->new(
@@ -116,8 +116,19 @@ sub run {
             );
             $self->call_hook( 'chat.privmsg', $message )
         },
-        join => sub { $self->call_hook( 'channel.joined' ) },
-        registered  => sub { $self->call_hook( 'server.registered' ) },
+
+        # XXX - we want the /full/ details of this user, not his nick
+        #       so we override the original irc_join callback
+        irc_join => sub { 
+            my $object = shift;
+            $object->AnyEvent::IRC::Client::join_cb(@_);
+            # and /THEN/ call our callback
+            # fix the param thing to be just a simple 'channel' parameter
+            my $channel = $_[0]->{params}->[0];
+            my $addr    = Morris::Message::Address->new( $_[0]->{prefix} );
+            $self->call_hook( 'channel.joined', $channel, $addr );
+        },
+        registered  => sub { $self->call_hook( 'server.registered', @_ ) },
     );
 }
 
@@ -129,6 +140,11 @@ sub irc_notice {
 sub irc_privmsg {
     my ($self, $args) = @_;
     $self->send_srv(PRIVMSG => $args->{channel} => $args->{message});
+}
+
+sub irc_mode {
+    my ($self, $args) = @_;
+    $self->send_srv(MODE => $args->{channel} => $args->{mode}, $args->{who});
 }
 
 __PACKAGE__->meta->make_immutable();
