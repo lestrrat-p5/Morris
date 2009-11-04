@@ -29,7 +29,7 @@ sub display_log {
     }
 
     my $limit = $1 || 10;
-    my $sql = "SELECT * FROM log WHERE channel = ? LIMIT $limit ORDER BY created_on DESC"
+    my $sql = "SELECT * FROM log WHERE channel = ? LIMIT $limit ORDER BY created_on DESC";
     my @binds = ($channel);
 
     my $sth = $dbh->prepare($sql);
