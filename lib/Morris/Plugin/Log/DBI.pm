@@ -1,7 +1,5 @@
 package Morris::Plugin::Log::DBI;
 use Moose;
-use DBI;
-use SQL::Abstract::Limit;
 use namespace::clean -except => qw(meta);
 
 extends 'Morris::Plugin::Log';
@@ -31,14 +29,8 @@ sub display_log {
     }
 
     my $limit = $1 || 10;
-    my $sqla = $self->sqla;
-    my ($sql, @binds) = $sqla->select(
-        'log',
-        '*',
-        { channel => $message->channel },
-        [ 'created_on DESC' ],
-        $limit
-    );
+    my $sql = "SELECT * FROM log WHERE channel = ? LIMIT $limit ORDER BY created_on DESC"
+    my @binds = ($channel);
 
     my $sth = $dbh->prepare($sql);
     $sth->execute(@binds);
