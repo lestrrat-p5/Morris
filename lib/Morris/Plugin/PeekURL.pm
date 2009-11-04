@@ -48,7 +48,7 @@ sub handle_message {
                     undef $guard;
                     $self->connection->irc_notice({
                         channel => $msg->channel,
-                        message => $headers->{Reason},
+                        message => "Request failed: $headers->{Reason} ($headers->{Status})",
                     });
                     return;
                 }
