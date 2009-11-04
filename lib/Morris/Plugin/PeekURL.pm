@@ -39,6 +39,8 @@ sub handle_message {
         my $file;
 
         my $guard; $guard = http_get $uri, 
+            timeout   => 30,
+            recurse   => 10,
             on_header => sub {
                 my ($headers) = @_;
 
