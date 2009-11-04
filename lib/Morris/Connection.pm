@@ -24,6 +24,12 @@ has server => (
     required => 1
 );
 
+has plugins => (
+    is => 'ro',
+    isa => 'ArrayRef',
+    writer => 'set_plugins'
+);
+
 has port => (
     is => 'ro',
     isa => 'Str',
@@ -49,6 +55,7 @@ sub new_from_config {
 
     my $plugins = delete $config->{plugin};
     my $self = $class->new(%$config);
+    my @plugins;
     while ( my ($class, $p) = each %$plugins ) {
         if ($class !~ s/^\+//) {
             $class = "Morris::Plugin::$class";
@@ -59,7 +66,9 @@ sub new_from_config {
 
         my $plugin = $class->new_from_config( $p );
         $plugin->register( $self );
+        push @plugins, $plugin;
     }
+    $self->set_plugins(\@plugins);
     return $self;
 }
 
