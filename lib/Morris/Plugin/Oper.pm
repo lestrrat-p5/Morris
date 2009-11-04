@@ -47,7 +47,8 @@ after register => sub {
 sub handle_message {
     my ($self, $channel, $address) = @_;
 
-    my $config  = $self->channels->{ $channel };
+    my $config  = $self->channels->{ $channel } ||
+        $self->channels->{ '*' };
     if (! $config) {
         return;
     }
