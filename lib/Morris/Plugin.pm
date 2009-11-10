@@ -22,3 +22,34 @@ sub register {
 __PACKAGE__->meta->make_immutable();
 
 1;
+
+__END__
+
+=head1 NAME
+
+Morris::Plugin - Base Class For Morris Plugin
+
+=head1 SYNOPSIS
+
+    package MyPlugin;
+    use Moose;
+    use namespace::clean -except => qw(meta);
+
+    extends 'Morris::Plugin';
+
+    after register => sub {
+        my ($self, $conn) = @_;
+
+        # Do whatever initialization requied
+
+        # Register which hook you want to respond to 
+        $conn->register_hook(
+            'chat.privmsg',  # hook name
+            sub {
+                my $msg = shift;
+                # Do whatever
+            }
+        );
+    };
+
+=cut

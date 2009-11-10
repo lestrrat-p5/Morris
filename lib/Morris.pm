@@ -59,3 +59,51 @@ sub run {
 __PACKAGE__->meta->make_immutable();
 
 1;
+
+__END__
+
+=head1 NAME
+
+Morris - An IRC Bot Based On Moose/AnyEvent
+
+=head1 SYNOPSIS
+
+    use Morris;
+
+    my $morris = Morris->new(
+        connections => [
+            Morris::Connection->new( ... )
+        ]
+    );
+    $morris->run();
+
+    # or when you instantiate from a config file
+    my $config = read_config_file( $config_file );
+    my $morris = Morris->new_from_config( $config );
+    $morris->run;
+
+=head1 METHODS
+
+=head2 new(%args)
+
+=head2 new_from_config (\%config)
+
+Instantiate a new morris instance
+
+=head2 run
+
+Starts the servicing.
+
+=head1 AUTHORS
+
+Daisuke Maki C<< <daisuke@endeworks.jp> >> 
+
+=head1 LICENSE
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+See http://www.perl.com/perl/misc/Artistic.html
+
+=cut
+
