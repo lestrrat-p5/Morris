@@ -20,6 +20,7 @@ sub run {
 
     my $morris = Morris->new_from_config( $self->config );
     $morris->run();
+    $morris->condvar->recv;
 }
 
 sub config_any_args {

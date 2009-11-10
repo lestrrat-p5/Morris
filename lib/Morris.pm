@@ -54,7 +54,6 @@ sub run {
     foreach my $conn ($self->all_connections) {
         $conn->run();
     }
-    $cv->recv;
 }
 
 __PACKAGE__->meta->make_immutable();
