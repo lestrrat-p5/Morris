@@ -12,7 +12,7 @@ after register => sub {
 
 after setup_dbh => sub {
     my ($self, $dbh) = @_;
-    $dbh->do(<<EOSQL);
+    $dbh->exec(<<EOSQL, \&Morris::_noop_cb);
 CREATE TABLE IF NOT EXISTS reputation (
     id INTEGER AUTO_INCREMENT PRIMARY KEY,
     score INTEGER NOT NULL DEFAULT 0,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS reputation (
     UNIQUE (nickname)
 );
 EOSQL
-    $dbh->commit;
+    $dbh->commit(\&Morris::_noop_cb);
 };
 
 sub handle_message {
@@ -37,46 +37,54 @@ sub handle_message {
         my $action = $2;
         my $add = ($action eq '--' ? -1 : 1) * ($3 || 1);
         
-        my ($pluses, $minuses, $score) = (0, 0, 0);
+        $dbh->exec(
+            "SELECT score, pluses, minuses FROM reputation WHERE nickname = ?",
+            $who,
+            sub {
+                my ($dbh, $rows, $rv) = @_;
+                my ($pluses, $minuses, $score) = (0, 0, 0);
+                my $update = 0;
+                if ($rv && scalar @$rows) {
+                    $update = 1;
+                    ($score, $pluses, $minuses) = @{ $rows->[0] };
+                }
 
-        my $sth = $dbh->prepare("SELECT score, pluses, minuses FROM reputation WHERE nickname = ?");
-        # fucking DBD::SQLite...
-        
-        $sth->execute($who);
-        ($score, $pluses, $minuses) = $sth->fetchrow_array();
-        $sth->finish;
+                $score ||= 0;
+                $pluses ||= 0;
+                $minuses |= 0;
 
-        my $update = (defined $score) ? 1 : 0;
-        $score ||= 0;
-        $pluses ||= 0;
-        $minuses |= 0;
+                if ($add > 0) {
+                    $score += $add;
+                    $pluses += $add;
+                } else {
+                    $score += $add;
+                    $minuses += ($add * -1);
+                }
 
-        if ($add > 0) {
-            $score += $add;
-            $pluses += $add;
-        } else {
-            $score += $add;
-            $minuses += ($add * -1);
-        }
-        
-        my @args = ($score, $pluses, $minuses, $who);
-        if ($update) {
-            $dbh->do(<<EOSQL, undef, @args);
-                UPDATE reputation
-                    SET score = ?,
-                        pluses = ?,
-                        minuses = ?
-                WHERE nickname = ?
+                my @args = ($score, $pluses, $minuses, $who);
+                if ($update) {
+                    $dbh->exec(<<EOSQL, @args, \&Morris::_noop_cb);
+                        UPDATE reputation
+                            SET score = ?,
+                                pluses = ?,
+                                minuses = ?
+                            WHERE nickname = ?
 EOSQL
-        } else {
-            $dbh->do("INSERT INTO reputation (score, pluses, minuses, nickname) VALUES( ?, ?, ?, ?)", undef, @args);
-        }
+                } else {
+                    $dbh->exec(<<EOSQL, @args, \&Morris::_noop_cb);
+                        INSERT INTO reputation
+                            (score, pluses, minuses, nickname)
+                            VALUES( ?, ?, ?, ?)
+EOSQL
+                }
+                $dbh->commit(\&Morris::_noop_cb);
 
-
-        $self->connection->irc_notice({
-            channel => $channel,
-            message => "$who: $score (${pluses}++, ${minuses}--)"
-        });
+                $self->connection->irc_notice({
+                    channel => $channel,
+                    message => "$who: $score (${pluses}++, ${minuses}--)"
+                });
+            }
+        );
     }
 }
 

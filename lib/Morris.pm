@@ -24,6 +24,7 @@ has connections => (
 
 sub _build_condvar { AnyEvent->condvar }
 sub _build_connections { [] }
+sub _noop_cb {};
 
 sub new_from_config {
     my ($class, $config) = @_;

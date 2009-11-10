@@ -54,7 +54,7 @@ sub display_log {
 
 after setup_dbh => sub {
     my ($self, $dbh) = @_;
-    $dbh->do(<<EOSQL);
+    $dbh->exec(<<EOSQL, \&Morris::_noop_cb);
         CREATE TABLE IF NOT EXISTS log (
             id       INTEGER AUTO_INCREMENT,
             channel TEXT NOT NULL,
@@ -71,15 +71,14 @@ sub log_message {
     my ($self, $message) = @_;
 
     my $dbh = $self->get_dbh();
-
-    my $sth = $dbh->prepare("INSERT INTO log (channel, nickname, username, hostname, message, created_on) VALUES (?, ?, ?, ?, ?, ?)");
-    $sth->execute(
+    my $sth = $dbh->exec("INSERT INTO log (channel, nickname, username, hostname, message, created_on) VALUES (?, ?, ?, ?, ?, ?)",
         $message->channel,
         $message->from->nickname,
         $message->from->username,
         $message->from->hostname,
         $message->message,
-        time()
+        time(),
+        \&Morris::_noop_cb,
     );
 }
 

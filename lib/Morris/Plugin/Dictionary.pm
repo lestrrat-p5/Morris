@@ -13,13 +13,14 @@ has max_definitions => (
 
 after setup_dbh => sub {
     my ($self, $dbh) = @_;
-    $dbh->do(<<EOSQL);
+    $dbh->exec(<<EOSQL, \&Morris::_noop_cb);
         CREATE TABLE IF NOT EXISTS dictionary (
             term TEXT NOT NULL,
             definition TEXT NOT NULL,
             UNIQUE (term, definition)
         );
 EOSQL
+    $dbh->commit;
 };
 
 after register => sub {
@@ -42,61 +43,67 @@ sub handle_message {
     ) {
         my ($term, $definition) = ($1, $2);
         my $dbh = $self->get_dbh();
+        $dbh->exec(
+            "SELECT count(*) FROM dictionary WHERE term = ?",
+            $term,
+            sub {
+                my ($dbh, $rows, $rv) = @_;
 
-        my $sth;
-
-        $sth = $dbh->prepare("SELECT count(*) FROM dictionary WHERE term = ?");
-        $sth->execute($term);
-        my ($count) = $sth->fetchrow_array();
-        $sth->finish;
-
-        if ($count > $self->max_definitions) {
-            $self->connection->irc_privmsg({
-                channel => $channel,
-                message => "$term について詰め込みすぎです＞＜。これ以上覚えられません！"
-            });
-        } else {
-            $dbh->do("INSERT INTO dictionary (term, definition) VALUES (?, ?)", undef, $term, $definition);
-            $dbh->commit;
-
-            my @messages = ("らじゃ！", "あいよ！", "はいよー", "うーっす");
-            $self->connection->irc_privmsg({
-                channel => $channel,
-                message => $messages[ rand @messages ]
-            });
-        }
+                my $count = $rows->[0]->[0];
+                if ($count > $self->max_definitions) {
+                    $self->connection->irc_privmsg({
+                        channel => $channel,
+                        message => "$term について詰め込みすぎです＞＜。これ以上覚えられません！"
+                    });
+                } else {
+                    $dbh->exec(
+                        "INSERT INTO dictionary (term, definition) VALUES (?, ?)",
+                        $term,
+                        $definition,
+                        sub {
+                            my @messages = ("らじゃ！", "あいよ！", "はいよー", "うーっす");
+                            $self->connection->irc_privmsg({
+                                channel => $channel,
+                                message => $messages[ rand @messages ]
+                            });
+                        }
+                    );
+                }
+            }
+        )
     } elsif ( $message =~ /^$nickname:\s*([^?]+)\?$/) {
         my $term = $1;
         my $definition;
 
         my $dbh = $self->get_dbh();
-        my $sth = $dbh->prepare("SELECT definition FROM dictionary WHERE term = ?");
-        $sth->execute($term);
-        $sth->bind_columns(\$definition);
-        my @definition;
-        while ($sth->fetchrow_arrayref) {
-            push @definition, $definition;
-        }
+        $dbh->exec(
+            "SELECT definition FROM dictionary WHERE term = ?",
+            $term,
+            sub {
+                my ($dbh, $rows, $rv) = @_;
 
-        my $reply;
-        if (! @definition) {
-            $reply = "$term ってなんですか？おいしい？";
-        } else {
-            $reply = "$term は ";
-            if (@definition == 1) {
-                $reply .= $definition[0];
-            } else {
-                my $last = pop @definition;
-                $reply .= join(" 、", @definition);
-                $reply .= " 、もしくは $last";
-            }
-            $reply .= " ということらしいですYO";
-        }
+                my @definitions = map { $_->[0] } @$rows;
+                my $reply;
+                if (! @definitions) {
+                    $reply = "$term ってなんですか？おいしい？";
+                } else {
+                    $reply = "$term は ";
+                    if (@definitions == 1) {
+                        $reply .= $definitions[0];
+                    } else {
+                        my $last = pop @definitions;
+                        $reply .= join(" 、", @definitions);
+                        $reply .= " 、もしくは $last";
+                    }
+                    $reply .= " ということらしいですYO";
+                }
                 
-        $self->connection->irc_privmsg({
-            channel => $channel,
-            message => $reply,
-        });
+                $self->connection->irc_privmsg({
+                    channel => $channel,
+                    message => $reply,
+                });
+            }
+        );
     }
 }
 

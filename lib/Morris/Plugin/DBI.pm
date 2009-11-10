@@ -1,6 +1,6 @@
 package Morris::Plugin::DBI;
 use Moose;
-use DBI;
+use AnyEvent::DBI;
 use namespace::clean -except => qw(meta);
 
 extends 'Morris::Plugin';
@@ -25,12 +25,12 @@ around BUILDARGS => sub {
     my $instances = $args->{instances} ||= delete $args->{instance};
     foreach my $name ( keys %$instances ) {
         my $config = $instances->{$name};
-        $instances->{$name} = DBI->connect(
+        $instances->{$name} = AnyEvent::DBI->new(
             $config->{dsn},
             $config->{username},
             $config->{password},
             $config->{options}
-        )
+        );
     }
     return $args;
 };

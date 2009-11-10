@@ -33,21 +33,22 @@ after register => sub {
 
 after setup_dbh => sub {
     my ($self, $dbh) = @_;
-    $dbh->do(<<EOSQL);
+    $dbh->exec(<<EOSQL, \&Morris::_noop_cb);
         CREATE TABLE IF NOT EXISTS qotd (
             id integer auto_increment primary key,
             channel text not null,
             quote text not null,
             ends_with_connector BOOLEAN NOT NULL DEFAULT 0,
-            created_on integer not null
+            created_on integer not null,
+            UNIQUE (channel, quote)
         );
 EOSQL
+    $dbh->commit;
 };
 
 sub handle_message {
     my ($self, $msg) = @_;
 
-    my $dbh = $self->get_dbh();
     my $command = $self->command;
     my $message = $msg->message;
     my $channel = $msg->channel;
@@ -79,56 +80,15 @@ sub handle_message {
         my $reply;
         if ($2) {
             $quote = $3;
-            my $rv = $dbh->do("DELETE FROM qotd WHERE channel = ? AND quote = ?",
-                undef,
-                $channel,
-                $quote
-            );
-            if ($rv > 0) {
-                $quote = "「$quote」を忘れた！ ($rv)";
-            } else {
-                $quote = "「$quote」なんて無かった！";
-            }
+            $self->forget_quote( $msg, $3 );
         } elsif ($3) {
-            $quote = $3;
-            my $ends_with_connector = $self->ends_with_connector($quote);
-            $dbh->do("INSERT INTO qotd (channel, quote, ends_with_connector, created_on) VALUES (?, ?, ?, ?)", undef, $channel, $quote, $ends_with_connector, time());
-
-            my $sth = $dbh->prepare("SELECT count(*) FROM qotd WHERE channel = ?");
-            $sth->execute($channel);
-            my ($count) = $sth->fetchrow_array();
-            $reply = "$message （登録数：$count）";
+            $self->insert_quote( $msg, $3 );
         } else {
             my $x = $1;
             my $count = scalar(my @a = ($x =~ /\G((?:$command))/g));
 
-            my $last = $dbh->prepare( "SELECT quote FROM qotd WHERE channel = ? AND ends_with_connector = 0 ORDER BY random() LIMIT 1");
-            if ($count == 1) {
-                $last->execute($channel);
-                ($quote) = $last->fetchrow_array();
-                $last->finish;
-            } else {
-                my $sth = $dbh->prepare( "SELECT quote FROM qotd WHERE channel = ? ORDER BY random() LIMIT " . ($count - 1));
-                if ($sth->execute($channel)) {
-                    $quote = '';
-                    my $a_quote;
-                    $sth->bind_columns(\$a_quote);
-                    while ($sth->fetchrow_arrayref) {
-                        $quote .= $a_quote . ' ';
-                    }
-                    $last->execute($channel);
-                    $quote .= ($last->fetchrow_array)[0];
-                    $last->finish;
-                }
-                $sth->finish;
-            }
+            $self->select_quote( $msg, $count );
         }
-
-        $quote ||= '...';
-        $self->connection->irc_notice({
-            channel => $channel,
-            message => $reply || $facemarks[ rand @facemarks ] . " < $quote ",
-        });
     }
 }
 
@@ -146,6 +106,104 @@ sub ends_with_connector {
         $prev = $type;
     }
     return $ret;
+}
+
+sub forget_quote {
+    my ($self, $msg, $quote) = @_;
+    my $dbh = $self->get_dbh();
+    $dbh->exec(
+        "DELETE FROM qotd WHERE channel = ? AND quote = ?",
+        $msg->channel,
+        $quote,
+        sub {
+            my $rv = $_[2];
+            my $reply = ($rv > 0) ?
+                "「$quote」を忘れた！ ($rv)" :
+                "「$quote」なんて無かった！"
+            ;
+            $self->connection->irc_notice({
+                channel => $msg->channel,
+                message => $reply
+            });
+        }
+    );
+}
+
+sub insert_quote {
+    my ($self, $msg, $quote) = @_;
+    my $ends_with_connector = $self->ends_with_connector($quote);
+    my $dbh = $self->get_dbh();
+    $dbh->exec(
+        "INSERT INTO qotd (channel, quote, ends_with_connector, created_on) VALUES (?, ?, ?, ?)",
+        $msg->channel,
+        $quote,
+        $ends_with_connector,
+        time(),
+        sub {
+            $dbh->exec(
+                "SELECT count(*) FROM qotd WHERE channel = ?",
+                $msg->channel,
+                sub {
+                    my $rows = $_[1];
+                    $self->connection->irc_notice({
+                        channel => $msg->channel,
+                        message => "$quote （登録数：$rows->[0]->[0]）",
+                    });
+                }
+            );
+        }
+    );
+}
+
+sub select_quote {
+    my ($self, $msg, $count) = @_;
+
+    my $dbh = $self->get_dbh();
+
+    # Do we have any items without a connector?
+    $dbh->exec(
+        "SELECT quote FROM qotd WHERE channel = ? AND ends_with_connector = 0 ORDER BY random() LIMIT 1",
+        $msg->channel,
+        sub {
+            my ($dbh, $rows, $rv) = @_;
+            if (scalar(@$rows) <= 0) {
+                # agh, nothing. bail out bail out
+                $self->connection->irc_notice({
+                    channel => $msg->channel,
+                    message => $facemarks[ rand @facemarks ] . " < nothing to see here!"
+                })
+            } else {
+                # proceed
+                $self->select_quote_more( $msg, $dbh, $rows->[0]->[0], $count );
+            }
+        }
+    );
+}
+
+sub select_quote_more {
+    my ($self, $msg, $dbh, $last, $count) = @_;
+
+    if ($count == 1) {
+        $self->connection->irc_notice({
+            channel => $msg->channel,
+            message => $facemarks[ rand @facemarks ] . " < $last"
+        });
+    } else {
+        $dbh->exec(
+            "SELECT quote FROM qotd WHERE channel = ? ORDER BY random() LIMIT " . ($count - 1),
+            $msg->channel,
+            sub {
+                my ($dbh, $rows, $rv) = @_;
+
+                return unless $rv;
+
+                $self->connection->irc_notice({
+                    channel => $msg->channel,
+                    message => $facemarks[ rand @facemarks ] . " < " . join(' ', (map { $_->[0] } @$rows), $last)
+                });
+            }
+        );
+    }
 }
 
 __PACKAGE__->meta->make_immutable;
