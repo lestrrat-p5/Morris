@@ -11,8 +11,7 @@ after register => sub {
 };
 
 after setup_dbh => sub {
-    my $self = shift;
-    my $dbh = $self->get_dbh();
+    my ($self, $dbh) = @_;
     $dbh->do(<<EOSQL);
 CREATE TABLE IF NOT EXISTS reputation (
     id INTEGER AUTO_INCREMENT PRIMARY KEY,
