@@ -31,10 +31,8 @@ after register => sub {
     $conn->register_hook( 'chat.privmsg', sub { $self->handle_message(@_) } );
 };
 
-sub handle_message {
-    my ($self, $msg) = @_;
-
-    my $dbh = $self->get_dbh();
+after setup_dbh => sub {
+    my ($self, $dbh) = @_;
     $dbh->do(<<EOSQL);
         CREATE TABLE IF NOT EXISTS qotd (
             id integer auto_increment primary key,
@@ -44,7 +42,12 @@ sub handle_message {
             created_on integer not null
         );
 EOSQL
+};
 
+sub handle_message {
+    my ($self, $msg) = @_;
+
+    my $dbh = $self->get_dbh();
     my $command = $self->command;
     my $message = $msg->message;
     my $channel = $msg->channel;
