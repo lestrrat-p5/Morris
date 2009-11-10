@@ -112,5 +112,6 @@ sub __check_parsed {
     return $next->($self);
 }
 
+__PACKAGE__->meta->make_immutable();
 
 1;
