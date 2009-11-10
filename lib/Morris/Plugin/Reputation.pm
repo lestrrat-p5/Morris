@@ -10,9 +10,8 @@ after register => sub {
     $conn->register_hook( 'chat.privmsg', sub { $self->handle_message(@_) } );
 };
 
-sub handle_message {
-    my ($self, $msg) = @_;
-
+after setup_dbh => sub {
+    my $self = shift;
     my $dbh = $self->get_dbh();
     $dbh->do(<<EOSQL);
 CREATE TABLE IF NOT EXISTS reputation (
@@ -25,7 +24,12 @@ CREATE TABLE IF NOT EXISTS reputation (
 );
 EOSQL
     $dbh->commit;
+};
 
+sub handle_message {
+    my ($self, $msg) = @_;
+
+    my $dbh = $self->get_dbh();
     my $channel = $msg->channel;
     my $message = $msg->message;
 
