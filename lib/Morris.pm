@@ -1,11 +1,15 @@
 package Morris;
 use Moose;
-use EV;
 use AnyEvent;
 use Morris::Connection;
 use namespace::clean -except => qw(meta);
 
 our $VERSION = '0.01000';
+
+has condvar => (
+    is => 'ro',
+    lazy_build => 1,
+);
 
 has connections => (
     traits => ['Array'],
@@ -18,6 +22,7 @@ has connections => (
     }
 );
 
+sub _build_condvar { AnyEvent->condvar }
 sub _build_connections { [] }
 
 sub new_from_config {
@@ -42,11 +47,13 @@ sub new_from_config {
 
 sub run {
     my $self = shift;
+
+    my $cv = $self->condvar;
+    $cv->begin();
     foreach my $conn ($self->all_connections) {
         $conn->run();
     }
-
-    EV::loop;
+    $cv->recv;
 }
 
 __PACKAGE__->meta->make_immutable();
