@@ -49,3 +49,21 @@ __PACKAGE__->meta->make_immutable();
 
 1;
 
+__END__
+
+=head1 NAME
+
+Morris::Plugin::Join - Automatically Join Channel(s) Upon Connect
+
+=head1 SYNOPSIS
+
+  <Config>
+    <Connection whatever>
+      <Plugin Join>
+        Channel \#channel01           # don't forget to escape #
+        Channel \#channel02,password  # if your channel has a password
+      </Plugin>
+    </Connection>
+  </Config>
+
+=cut
