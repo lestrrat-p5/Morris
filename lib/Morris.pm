@@ -84,6 +84,13 @@ Morris - An IRC Bot Based On Moose/AnyEvent
     my $morris = Morris->new_from_config( $config );
     $morris->run;
 
+=head1 CONFIG FILE
+
+The configuration file shipped with Morris is written in Config::General syntax,
+but since our underlying config read is Config::Any, we support any format
+supported by Config::Any family. Our docs will be written in Config::General
+format, but you may choose whichever format you like.
+
 =head1 METHODS
 
 =head2 new(%args)

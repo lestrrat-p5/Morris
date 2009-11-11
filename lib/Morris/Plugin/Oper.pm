@@ -2,13 +2,6 @@ package Morris::Plugin::Oper;
 use Moose;
 use namespace::clean -except => qw(meta);
 
-# <Oper>
-#   <Channel #foo>
-#       Op regexp
-#       Op regexp
-#   </Channel>
-# </Oper>
-
 extends 'Morris::Plugin';
 
 has channels => (
@@ -66,3 +59,22 @@ sub handle_message {
 __PACKAGE__->meta->make_immutable();
 
 1;
+
+__END__
+
+=head1 NAME
+
+Morris::Plugin::Oper - Give Oper Rights Automatically
+
+=head1 SYNOPSIS
+
+  # in your config file
+  <Connection whatever>
+    <Plugin Oper>
+      <Channel #foo>
+        Op regexp
+      </Channel>
+    </Plugin>
+  </Connection>
+
+=cut
