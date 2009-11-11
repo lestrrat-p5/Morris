@@ -56,3 +56,49 @@ after register => sub {
 __PACKAGE__->meta->make_immutable();
 
 1;
+
+__END__
+
+=head1 NAME
+
+Morris::Plugin::DBI - Register Database Instances To Be Used In Plugins
+
+=head1 SYNOPSIS
+
+    <Connection whatever>
+      <Plugin DBI>
+        <Instance db01>
+          dsn dbi:SQLite:dbname=foo.db
+        </Instance>
+        <Instance db02>
+          dsn dbi:mysql:dbname=bar
+          username foo
+        </Instance>
+      </Plugin>
+
+      <Plugin Some::Other::Plugin>
+        dbname db01
+      </Plugin>
+      <Plugin Yet::Another::Plugin>
+        dbname db02
+      </Plugin>
+    </Connection>
+
+=head1 DESCRIPTION
+
+This plugin creates a database store for plugins to use.
+
+The associated Morris::Connection object will have a new method name 
+C<get_dbh($name)> that will allow you to get a handle to AnyEvent::DBI 
+object of that name.
+
+Plugins may optionally consume the L<Morris::Plugin::WithDB> role to
+implant a utility method C<get_dbh()> (on the plugin, not the connection), 
+which will fetch the database specified in the C<dbname> configuration
+parameter.
+
+=head1 SEE ALSO
+
+L<Morris::Plugin::WithDB>
+
+=cut
