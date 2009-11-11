@@ -70,9 +70,9 @@ Morris - An IRC Bot Based On Moose/AnyEvent
 
 =head1 SYNOPSIS
 
-    # If you just want to start using Morris, please checkout misc/sample.conf
-    # in the distro for a sample config file, which is the best way to figure 
-    # out how to configure Morris.
+    # If you just want to start using Morris, please checkout 
+    # misc/sample.conf in the distro for a sample config file, 
+    # which is the best way to figure out how to configure Morris.
 
     use Morris;
 
@@ -173,8 +173,73 @@ connect to a network, but does nothing.
 
 =head2 Plugin CLAUSE
 
-The Plugin clause is where all the plugins are defined. Multiple plugin
-sections are allowed. The order of initialization is NOT guaranteed.
+The Plugin clause is where all the plugins are defined, and it must be
+found inside a Connection clause. Multiple plugin sections are allowed. 
+
+The order of initialization is NOT guaranteed.
+
+Plugins should be specified I<without> the preceeding Morris::Plugin:: part
+from their module name. 
+
+    <Plugin Join> # Loads Morris::Plugin::Join
+      ....
+    </Plugin>
+
+If you would like to explicitly specify a fully
+qualified plugin name, you should prefix it with a single '+', like so:
+
+    <Plugin +My::Other::Plugin>
+      ...
+    </Plugin>
+
+Here's the current list of plugins:
+
+=over 4
+
+=item B<Morris::Plugin::DBI>
+
+Enables a database handle, so that other DB-dependent plugins can use it.
+On its own, it doesn't do anything
+
+=item B<Morris::Plugin::Dictionary>
+
+Add ability to remember certain key = value combinations.
+
+=item B<Morris::Plugin::Join>
+
+Automatically join a channel on connect
+
+=item B<Morris::Plugin::Log::DBI>
+
+Log every privmsg to a database
+
+=item B<Morris::Plugin::MP>
+
+Enable AnyEvent::MP for Morris.
+
+=item B<Morris::Plugin::Oper>
+
+Automatically give out oper to matched users.
+
+=item B<Morris::Plugin::PeekURL>
+
+When a URL-like string pattern appears in a privmsg, attemps to fetch it and
+display some information about it (like title, or image size, if it's a image)
+
+=item B<Morris::Plugin::QOTD>
+
+Remember phrases, and display them in a weird fashin.
+
+=item B<Morris::Plugin::Reputation>
+
+When a string like C<morris++> or C<morris--> is found, remembers that and
+keeps tab of the target's reputation
+
+=item B<Morris::Plugin::YSearch>
+
+Allows Yahoo! Search to run.
+
+=back
 
 =head1 METHODS
 
