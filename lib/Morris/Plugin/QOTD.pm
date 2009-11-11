@@ -1,6 +1,5 @@
 package Morris::Plugin::QOTD;
 use Moose;
-use DBI;
 use Text::MeCab;
 use namespace::clean -except => qw(meta);
 
