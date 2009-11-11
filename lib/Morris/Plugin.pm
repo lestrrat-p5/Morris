@@ -16,7 +16,7 @@ sub new_from_config {
 sub register {
     my ($self, $conn) = @_;
     $self->_connection( $conn );
-    warn "registered $self";
+    warn "registered $self" if Morris::DEBUG();
 }
 
 __PACKAGE__->meta->make_immutable();
