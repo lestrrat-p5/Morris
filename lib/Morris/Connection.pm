@@ -5,9 +5,13 @@ use Morris::Message;
 use namespace::clean -except => qw(meta);
 
 has hooks => (
+    traits => ['Hash'],
     is => 'ro',
     isa => 'HashRef',
     lazy_build => 1,
+    handles => {
+        get_hook => 'get',
+    }
 );
 
 has irc => (
@@ -84,7 +88,7 @@ sub call_hook {
 
 warn "Calling hooks for $name" if Morris::DEBUG();
 
-    my $hooks = $self->hooks->{$name};
+    my $hooks = $self->get_hook( $name );
     return unless $hooks;
 
     foreach my $hook (@$hooks) {
