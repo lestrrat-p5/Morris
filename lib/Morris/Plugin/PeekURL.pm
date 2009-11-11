@@ -96,15 +96,9 @@ sub handle_message {
                         );
                         $p->strict_comment(1);
         
-                        my $charset = 'cp932';
+                        my $charset;
         
-                        foreach my $ct (@ct) {
-                            if ($ct =~ s/charset=Shift_JIS/charset=cp932/) {
-                                $charset = 'cp932';
-                            }
-                        }
-        
-                        if ($data =~ /charset=(?:'([^']+)'|"([^"]+)"|(.+)\b)/) {
+                        if ($data =~ /charset=(?:'([^']+?)'|"([^"]+?)"|([a-zA-Z0-9_-]+)\b)/) {
                             my $cs = lc($1 || $2 || $3);
                             if ($cs =~ /^Shift[-_]?JIS$/i) {
                                 $charset = 'cp932';
@@ -112,6 +106,17 @@ sub handle_message {
                                 $charset = $cs;
                             }
                         }
+
+                        if (! $charset) {
+                            foreach my $ct (@ct) {
+                                if ($ct =~ s/charset=Shift_JIS/charset=cp932/i) {
+                                    $charset = 'cp932';
+                                } elsif ($ct =~ /charset=([a-zA-Z0-9_-]+)/) {
+                                    $charset = $1;
+                                }
+                            }
+                        }
+                        $charset ||= 'utf-8';
         
                         eval {
                             $p->parse_content(
