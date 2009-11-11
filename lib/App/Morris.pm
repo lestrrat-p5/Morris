@@ -11,9 +11,14 @@ has '+configfile' => (
 );
 
 has config => (
+    traits => ['NoGetopt'],
     is => 'ro',
     isa => 'HashRef',
 );
+
+around _usage_format => sub {
+    return "usage: %c %o (run 'perldoc App::Morris' for more info)";
+};
     
 sub run {
     my $self = shift;
@@ -37,3 +42,21 @@ sub config_any_args {
 __PACKAGE__->meta->make_immutable();
 
 1;
+
+__END__
+
+=head1 NAME
+
+App::Morris - Command Line Interface For Morris
+
+=head1 SYNOPSIS
+
+    morris --configfile=/path/to/config.conf
+
+=head1 OPTIONS
+
+=head2 configfile
+
+The location to find the config file. The default is /etc/morris.conf
+
+=cut
