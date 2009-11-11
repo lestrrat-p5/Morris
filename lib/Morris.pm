@@ -1,4 +1,5 @@
 package Morris;
+use 5.008;
 use Moose;
 use AnyEvent;
 use Morris::Connection;
