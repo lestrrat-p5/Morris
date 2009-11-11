@@ -1,0 +1,9 @@
+Changes
+=======
+
+0.01000_01 - 11 Nov 2009
+    * First public release (it's been used in production in my company
+      for over a year)
+    * Please note that this was intended as a toy... Patches, improvements
+      are welcome.
+    * Also, some parts are hardcoded with Japanese text. You've been warned.
