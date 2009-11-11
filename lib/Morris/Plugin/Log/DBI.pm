@@ -23,33 +23,30 @@ sub display_log {
 
     my $body = $message->message;
 
-    my $myname = $self->connection->nickname;
-    if ($body !~ s/^$myname:\s*log(?:\s+(\d+))?$//) {
+    if ($body !~ s/^!log\s*(?:\s+(\d+))?$//) {
         return;
     }
 
     my $limit = $1 || 10;
-    my $sql = "SELECT * FROM log WHERE channel = ? LIMIT $limit ORDER BY created_on DESC";
+    my $sql = "SELECT message, nickname, created_on FROM log WHERE channel = ? ORDER BY created_on DESC LIMIT $limit";
     my @binds = ($message->channel);
 
-    my $sth = $dbh->prepare($sql);
-    $sth->execute(@binds);
-    my $connection = $self->connection;
-    my @logs;
-    while( my $h = $sth->fetchrow_hashref ) {
-        push @logs, $h;
-    }
+    $dbh->exec($sql, @binds, sub {
+        my ($dbh, $rows, $rv) = @_;
 
-    foreach my $h (reverse @logs) {
-        $connection->irc_notice({
-            channel => $message->channel,
-            message => sprintf( '[%s] %s: %s',
-                POSIX::strftime('%Y/%m/%d %T', localtime($h->{created_on})),
-                $h->{nickname},
-                $h->{message}
-            )
-        });
-    }
+        return unless $rows;
+        my $connection = $self->connection;
+        foreach my $h (reverse @$rows) {
+            $connection->irc_notice({
+                channel => $message->channel,
+                message => sprintf( '[%s] %s: %s',
+                    POSIX::strftime('%Y/%m/%d %T', localtime($h->[2])),
+                    $h->[1],
+                    $h->[0]
+                )
+            });
+        }
+    });
 }
 
 after setup_dbh => sub {
@@ -64,6 +61,12 @@ after setup_dbh => sub {
             message  TEXT,
             created_on INTEGER NOT NULL
         );
+EOSQL
+    $dbh->exec(<<EOSQL, \&Morris::_noop_cb);
+        CREATE INDEX IF NOT EXISTS log_created_on_idx ON log (created_on)
+EOSQL
+    $dbh->exec(<<EOSQL, \&Morris::_noop_cb);
+        CREATE INDEX IF NOT EXISTS log_channel_idx ON log (channel)
 EOSQL
 };
 
