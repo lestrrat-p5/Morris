@@ -2,6 +2,23 @@ package Morris::Plugin::Oper;
 use Moose;
 use namespace::clean -except => qw(meta);
 
+# TODO: for jshirley
+#
+#  <Connection whatever>
+#    <Plugin DBI>
+#      <Instance main>
+#        dsn dbi:mysql:dbname=whatever
+#      </Instance>
+#    </Plugin>
+#    <Plugin Oper::DBI>
+#      dbname main
+#    </Plugin>
+#  </Connection>
+#
+# =head1 DESCRIPTION
+# 
+# See Morris::Plugin::Oper::DBI for ways to keep this data in a database
+
 extends 'Morris::Plugin';
 
 has channels => (
