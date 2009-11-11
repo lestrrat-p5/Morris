@@ -56,3 +56,32 @@ sub DEMOLISH {
 __PACKAGE__->meta->make_immutable();
 
 1;
+
+__END__
+
+=head1 NAME
+
+Morris::Plugin::MP - Enable AnyEvent::MP On Morris
+
+=head1 SYNOPSIS 
+
+  <Connection whatever>
+    <Plugin MP>
+      group GroupName
+      profile ProfileName
+    </Plugin>
+  </Connection>
+
+=head1 DESCRIPTION
+
+This plugin enables AnyEvent::MP for Morris. By default a 'notice' and 'privmsg'actions are registered for use, so you can do
+
+    aemp $(groupname) privmsg "#channel" "your message"
+    aemp $(groupname) notice "#channel" "your message"
+    # or the equivalent snd() call from your app
+
+to make morris say stuff.
+
+Note that AnyEvent::MP requires a seeder process, and other minor environment preparation.
+
+=cut
