@@ -16,7 +16,6 @@ requires 'Image::Size';
 requires 'Moose' => '0.92';
 requires 'MooseX::Getopt';
 requires 'MooseX::SimpleConfig' => 0.04;
-requires 'SQL::Abstract::Limit'; # want to remove
 requires 'Text::MeCab';
 requires 'URI';
 requires 'XML::LibxML' => '1.61';
