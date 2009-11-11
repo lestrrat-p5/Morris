@@ -158,7 +158,7 @@ Normally you need to set the following fields:
 The same Network definition may be re-used between multiple Connection
 clauses. This will allow multiple bots (if the network allows such thing)
 
-TODO: Need to make Nick/Username configurable
+TODO: Need to make Nick/Username configurable per-connection
 
 =head2 Connection CLAUSE
 
