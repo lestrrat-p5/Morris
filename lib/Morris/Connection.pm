@@ -79,7 +79,7 @@ sub new_from_config {
         $plugin->register( $self );
         push @plugins, $plugin;
     }
-    $self->set_plugins(\@plugins);
+    $self->set_plugins(\@plugins) if @plugins;
     return $self;
 }
 

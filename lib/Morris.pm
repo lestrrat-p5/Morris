@@ -35,12 +35,14 @@ sub new_from_config {
     my $self = $class->new();
 
     while ( my ($name, $conn) = each %{$config->{connection}}) {
+        confess "No network specified for connection '$name'" unless $conn->{network};
+
         my $network = $config->{network}->{ $conn->{network} };
         $network->{server} ||= $conn->{network};
 
         my $connection = Morris::Connection->new_from_config( {
-            %$conn,
             %$network,
+            %$conn,
             name   => $name,
         });
         $self->push_connection( $connection );
@@ -159,7 +161,10 @@ Normally you need to set the following fields:
 The same Network definition may be re-used between multiple Connection
 clauses. This will allow multiple bots (if the network allows such thing)
 
-TODO: Need to make Nick/Username configurable per-connection
+Note that The above information I<may> be overridden on a per-connection
+basis (so to allow multiple, differently named bots on a same network).
+However, it is recommended that you keep the "master" configuration
+for a Network separate from a Connection
 
 =head2 Connection CLAUSE
 
