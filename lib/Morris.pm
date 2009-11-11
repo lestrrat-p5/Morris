@@ -259,6 +259,15 @@ Instantiate a new morris instance
 
 Starts the servicing.
 
+=head1 WHY IS IT CALLED MORRIS?
+
+Why do you care? I originally wanted to write a Moose-based IRC bot for 
+practice/toying with, and just thought something starting with "Moo.." would
+be good. Turns out using the name 'Morris' sounds like I'm refering to a person,
+which gives me a warm and fuzzy feeling.
+
+...or something like that. No, there's no real reason.
+
 =head1 AUTHORS
 
 Daisuke Maki C<< <daisuke@endeworks.jp> >> 
