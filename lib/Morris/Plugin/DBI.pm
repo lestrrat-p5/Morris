@@ -29,7 +29,7 @@ around BUILDARGS => sub {
             $config->{dsn},
             $config->{username},
             $config->{password},
-            $config->{options}
+            (%{ $config->{options} || {} }, exec_server => 1 ),
         );
     }
     return $args;
