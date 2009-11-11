@@ -4,6 +4,12 @@ use AnyEvent::IRC::Client;
 use Morris::Message;
 use namespace::clean -except => qw(meta);
 
+has hooks => (
+    is => 'ro',
+    isa => 'HashRef',
+    lazy_build => 1,
+);
+
 has irc => (
     is => 'rw',
     isa => 'AnyEvent::IRC::Client',
@@ -12,16 +18,15 @@ has irc => (
     }
 );
 
-has hooks => (
-    is => 'ro',
-    isa => 'HashRef',
-    lazy_build => 1,
-);
-
-has server => (
+has nickname => (
     is => 'ro',
     isa => 'Str',
     required => 1
+);
+
+has password => (
+    is => 'ro',
+    isa => 'Str',
 );
 
 has plugins => (
@@ -37,18 +42,20 @@ has port => (
     required => 1
 );
 
-has nickname => (
+has server => (
     is => 'ro',
     isa => 'Str',
     required => 1
 );
 
-has password => (
+has username => (
     is => 'ro',
     isa => 'Str',
+    lazy_build => 1,
 );
 
 sub _build_hooks { {} }
+sub _build_username { $_[0]->nickname }
 
 sub new_from_config {
     my ($class, $config) = @_;
@@ -75,7 +82,7 @@ sub new_from_config {
 sub call_hook {
     my ($self, $name, @args) = @_;
 
-warn "Calling hooks for $name";
+warn "Calling hooks for $name" if Morris::DEBUG();
 
     my $hooks = $self->hooks->{$name};
     return unless $hooks;
@@ -100,7 +107,7 @@ sub run {
     $self->irc($irc);
     $irc->connect( $self->server, $self->port, {
         nick => $self->nickname,
-        user => $self->nickname,
+        user => $self->username,
         password => $self->password,
         timeout => 1,
     } );
@@ -150,3 +157,31 @@ sub irc_mode {
 __PACKAGE__->meta->make_immutable();
 
 1;
+
+__END__
+
+=head1 NAME
+
+Morris::Connection - Single IRC Connection
+
+=head1 SYNOPSIS
+
+    use Morris::Connection;
+
+    my $conn = Morris::Connection->new(
+        nickname => $nickname,
+        port     => $port_number,
+        password => $optional_password,
+        server   => $server_name,
+        username => $username,
+    );
+
+    # to receive events
+    $conn->register_hook( $hook_name => $code );
+
+    # to send events
+    $conn->irc_notice( { channel => $channel, message => $message } );
+    $conn->irc_privmsg( { channel => $channel, message => $message } );
+    $conn->irc_mode( { channel => $channel, mode => $new_mode, who => $target } );
+
+=cut

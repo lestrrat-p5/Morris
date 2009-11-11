@@ -4,6 +4,8 @@ use AnyEvent;
 use Morris::Connection;
 use namespace::clean -except => qw(meta);
 
+use constant DEBUG => $ENV{PERL_MORRIS_DEBUG};
+
 our $VERSION = '0.01000';
 
 has condvar => (
