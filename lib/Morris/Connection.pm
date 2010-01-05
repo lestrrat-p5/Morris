@@ -86,8 +86,6 @@ sub new_from_config {
 sub call_hook {
     my ($self, $name, @args) = @_;
 
-warn "Calling hooks for $name" if Morris::DEBUG();
-
     my $hooks = $self->get_hook( $name );
     return unless $hooks;
 
@@ -116,7 +114,10 @@ sub run {
         timeout => 1,
     } );
     $irc->reg_cb(
-        connect     => sub { $self->call_hook( 'server.connected', @_ ) },
+        connect     => sub {
+            warn "connected to: ". $self->server . ":" . $self->port;
+            $self->call_hook( 'server.connected', @_ )
+        },
         disconnect  => sub { $self->call_hook( 'server.disconnect', @_ ) },
         irc_privmsg => sub { 
             my ($nick, $raw) = @_;
