@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.01000_02
+    * Fix PeekURL plugin's regular expression to search for charsets
+
 0.01000_01 - 11 Nov 2009
     * First public release (it's been used in production in my company
       for over a year)
