@@ -28,7 +28,8 @@ feature 'Morris::Plugin::PeekURL requirements',
     'AnyEvent::HTTP',
     'HTML::TreeBuilder',
     'Image::Size',
-    'URI';
+    'URI',
+    'WWW::Shorten';
 
 feature 'Morris::Plugin::YSearch requirements',
     'AnyEvent::HTTP',

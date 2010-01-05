@@ -7,6 +7,7 @@ use File::Temp;
 use HTML::TreeBuilder;
 use Image::Size;
 use URI;
+use WWW::Shorten 'TinyURL';
 use namespace::clean -except => qw(meta);
 
 extends 'Morris::Plugin';
@@ -20,19 +21,21 @@ sub handle_message {
     my ($self, $msg) = @_;
 
     my $message = $msg->message;
-    while ( $message =~ m{(!)?(?:(https?):)(?://([^\s/?#]*))([^\s?#]*)(?:\?([^\s#]*))?(?:#(.*))?}g ) {
-        my $do_peek = defined($1) ? 0 : 1;
-        my ($scheme, $authority, $path, $query, $fragment) = ($2, $3, $4, $5, $6);
+    while ( $message =~ m{((!)?(?:https?:)(?://[^\s/?#]*)[^\s?#]*(?:\?[^\s#]*)?(?:#.*)?)}g ) {
+        my $do_peek = defined($2) ? 0 : 1;
         next unless $do_peek;
-        next unless $scheme && $scheme =~ /^http/i;
-        next unless $authority;
 
-        my $uri = URI->new();
-        $uri->scheme($scheme);
-        $uri->authority($authority);
-        $uri->path($path);
-        $uri->query($query);
-        $uri->fragment($fragment);
+        my $uri = URI->new($1);
+        next unless $uri->scheme && $uri->scheme =~ /^http/i;
+        next unless $uri->authority;
+
+        if (length "$uri" > 27 && $uri->authority !~ /tinyurl|bit\.ly/) {
+            $uri = URI->new(makeashorterlink($uri));
+            $self->connection->irc_notice({
+                channel => $msg->channel,
+                message => "short url: $uri"
+            });
+        }
 
         my @ct;
         my $ct = 0; # 0 - text, 1 - image, 2, other
